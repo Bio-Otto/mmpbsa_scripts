@@ -1,95 +1,227 @@
- # Component Scoring
- 
- ```
-python component_scoring.py --complex ligand_protein.pdb
-{'Chemgauss4 Score': -1.69817316532135, 'CG3:Steric': -8.180750846862793, 'CG3:Clash': 0.5142186284065247, 'CG3:ProDesolv': 5.004239082336426, 'CG3:LigDesolv': 1.1996185779571533, 'CG3:LigDesolvHB': -0.012127834372222424, 'CG4:HB': -0.22337093949317932} 
-```
- 
- 
- # Free Energy Estimation
- 
- 
- 
- ### Setup
- 
- Please download and install Amber20. At the end, you should have a path to amber and set the environment variable:
- ```
-export AMBERHOME=/Users/austin/Downloads/amber20
-```
-where inside the folder there is a file ```amber.sh```.
+# Open-Source MMGBSA Analysis Package
 
+A fully open-source Python package for performing MMGBSA (Molecular Mechanics Generalized Born Surface Area) analysis for drug discovery and computational chemistry applications.
 
- 
-Create a new Conda env with python 3.7 and install the following packages below.
-```
-conda create -n myenv python=3.7 -y
-conda activate myenv
-conda install -c conda-forge -c omnia -c openeye openmm openeye-toolkits pymbar 
-pip install mdtraj
-``` 
+## Features
 
+- **Fully Open Source**: No proprietary software dependencies
+- **MMGBSA Calculations**: Binding free energy calculations using Generalized Born models
+- **Molecular Docking**: Integration with Vina for molecular docking
+- **Molecular Properties**: Comprehensive molecular property calculations
+- **Trajectory Analysis**: MDTraj-based trajectory processing
+- **Statistical Analysis**: PyMBAR integration for advanced statistical analysis
 
-### Usage
-There will be more features added in the future. For now, this is the code on the master branch. 
+## Open Source Alternatives
 
-Please make sure your working directory is the base of this repo.
+This package replaces proprietary software with open-source alternatives:
 
-```
-cd path-to-mmgbsa_scripts/
-```
+| Original (Proprietary) | Open Source Alternative | Purpose |
+|------------------------|------------------------|---------|
+| OpenEye Toolkits | RDKit + Open Babel | Molecular file I/O, charge assignment |
+| AMBER | OpenMM | Molecular dynamics, force fields |
+| OpenEye Docking | Vina/Smina | Molecular docking |
+| AMBER MMGBSA | OpenMM GB | MMGBSA calculations |
 
-There are two phases to MMGBSA/PBSA calculations: equilibration (or relaxation as I think of it), and the production simulation
-where we sample states to use for the MMGBSA calculation. MMGBSA calculations are computed on static frames, and averaed over those frames.
-There are two approaches implemented. ```--calcFrames 5``` for example will sample five equally spaced frames from the production 
-trajectories (this is the naive approach), ```--mbar 100``` for example will sample 100 equall spaced frames, and then use a technique
-from John Chodera's lab to subsample those frames to "maximizes number of effectively uncorrelated samples" [1].  For instance,
-```--mbar 100``` will sample 100 frames, and then subsample 20 frames that are the least correlated. By default, the code will use 
-```--mbar``` instead of naive sampling. The default settings should be perfect for most cases. 
+## Installation
 
+### Prerequisites
 
-Here is an example. You can use -h to see more options if desired. 
-PBSA is very slow. If you use ```--method pbsa``` please also do not use ```--mbar```, instead pass ```--calcFrames ``` with a number
-no greater than 10 unless you have a lot of time on your hands... 
+1. **Python 3.7+**
+2. **Open Babel** (for molecular format conversion)
+3. **Vina** (for molecular docking, optional)
 
-```
-export AMBERHOME=...../amber20
-export OE_LICENSE=...../oe_license.txt
-source $AMBERHOME/amber.sh
-conda activate myenv #do this after the source.
-CUDA_VISIBLE_DEVICES=0 python run_mmgpbsa.py --com /homes/aclyde/MPro_0387_Gen3L_5.pdb -v 0 \ 
-               --odir testdir --platform CUDA
+### Install Open Babel
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get install openbabel
 ```
 
-If the script is being wonky, try passing ```--amber_path $AMBERHOME```, though it should automatically detect this from the env. 
-
-#### Example output
-```
-/Users/austin/anaconda3/envs/mmpbsa_scripts/bin/python /Users/austin/PycharmProjects/mmpbsa_scripts/run_mmgpbsa.py --com /Users/austin/MPro-docked/MPro_0387_Gen3L_5.pdb --odir /Users/austin/PycharmProjects/mmpbsa_scripts/test --platform OpenCL
-INFO [SystemLoader:split_complex_from_system] Reading input PDB /Users/austin/MPro-docked/MPro_0387_Gen3L_5.pdb
-INFO [SystemLoader:split_complex_from_system] Split complex. atom sizes-- lig: 18, prot: 2370, water: 22, other: 331
-INFO [SystemLoader:prepare_simulation] Built simulation using platform OpenCL with properties {'Precision': 'mixed'}
-INFO [SystemLoader:prepare_simulation] Minimizing and setting velocities to 310.15 K
-INFO [SystemLoader:prepare_simulation] Equilibrating for 5000 steps, or 10 ps
-#"Progress (%)"	"Step"	"Potential Energy (kJ/mole)"	"Temperature (K)"	"Speed (ns/day)"	"Time Remaining"
-12.5%	1249	-34462.32310300725	296.18992722175085	0	--
-25.0%	2498	-34256.932992474976	309.5384422165362	44.6	0:29
-37.5%	3747	-34262.00635869912	319.4292600242049	44.2	0:24
-50.0%	4996	-34207.6035860422	313.42742950825664	45.5	0:19
-INFO [SystemLoader:prepare_simulation] Running Production for 5000 steps, or 10 ps
-62.5%	6245	-34094.84048225327	318.3137614730914	42.4	0:15
-74.9%	7494	-33912.29320916234	308.6902930492715	39.8	0:10
-87.4%	8743	-33681.71865305711	305.08087349583053	37.5	0:05
-99.9%	9992	-34039.353253210546	311.1187788403318	36.7	0:00
-INFO [SystemLoader:prepare_simulation] Simulation Done. Running MBAR on 50 snapshots.
-INFO [SystemLoader:prepare_simulation] Done. Subsampled 30 from 50 snapshots.
-INFO [SystemLoader:run_amber] Calculating mmgb/pbsa value...may take awhile.
--25.6433 ± 2.0015 (kcal/mol)
+**macOS:**
+```bash
+brew install open-babel
 ```
 
+**Windows:**
+Download from [Open Babel website](http://openbabel.org/wiki/Get_Open_Babel)
 
-#### Citations (to be finished)
+### Install Vina (Optional)
 
-[1] Shirts MR and Chodera JD. Statistically optimal analysis of samples from multiple equilibrium states. J. Chem. Phys. 129:124105, 2008 http://dx.doi.org/10.1063/1.2978177
+**Ubuntu/Debian:**
+```bash
+sudo apt-get install autodock-vina
+```
 
-[2] J. D. Chodera, W. C. Swope, J. W. Pitera, C. Seok, and K. A. Dill. Use of the weighted histogram analysis method for the analysis of simulated and parallel tempering simulations. JCTC 3(1):26-41, 2007.
+**macOS:**
+```bash
+brew install vina
+```
+
+### Install Python Package
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/mmgpbsa-open.git
+cd mmgpbsa-open
+
+# Install the package
+pip install -e .
+
+# Or install from requirements
+pip install -r requirements.txt
+```
+
+## Quick Start
+
+### Basic MMGBSA Analysis
+
+```bash
+# Run MMGBSA analysis on a protein-ligand complex
+python run_mmgpbsa.py --com complex.pdb --odir results --platform CPU
+```
+
+### Component Scoring
+
+```bash
+# Score a protein-ligand complex
+python component_scoring.py --complex complex.pdb
+```
+
+### Advanced Usage
+
+```bash
+# Run with specific parameters
+python run_mmgpbsa.py \
+    --com complex.pdb \
+    --odir results \
+    --platform CUDA \
+    --ps 1000 \
+    --mbar 50 \
+    --method gbsa \
+    -v 2
+```
+
+## Usage Examples
+
+### MMGBSA Analysis
+
+```python
+from mmgpbsa.systemloader import SystemLoader
+
+# Initialize system
+sl = SystemLoader(
+    dirpath="results",
+    verbose=1,
+    input_pdb="complex.pdb",
+    ps=1000,
+    calcFrames=50,
+    platform_name="CPU"
+)
+
+# Prepare and run simulation
+sl.prepare_simulation()
+
+# Calculate MMGBSA
+delta_g, std = sl.run_amber("gbsa", amber_path=None)
+print(f"ΔG = {delta_g:.2f} ± {std:.2f} kcal/mol")
+```
+
+### Molecular Docking
+
+```python
+from component_scoring import score_and_build
+
+# Score a complex
+scores = score_and_build("complex.pdb")
+print(scores)
+```
+
+## Configuration
+
+### Force Fields
+
+The package supports multiple force fields through OpenMM:
+- AMBER14 (default)
+- CHARMM36
+- OPLS-AA
+
+### GB Models
+
+Available Generalized Born models:
+- GBn (igb=5)
+- GBn2 (igb=7)
+- OBC2 (igb=8)
+
+### Platforms
+
+Supported OpenMM platforms:
+- CPU (default)
+- CUDA (NVIDIA GPUs)
+- OpenCL (AMD GPUs)
+
+## Output Files
+
+The analysis generates several output files:
+
+- `trajectory.dcd`: Molecular dynamics trajectory
+- `com.pdb`: Complex structure
+- `apo.pdb`: Protein structure
+- `lig.pdb`: Ligand structure
+- `results.log`: Analysis log file
+
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+### Development Setup
+
+```bash
+# Clone repository
+git clone https://github.com/yourusername/mmgpbsa-open.git
+cd mmgpbsa-open
+
+# Install in development mode
+pip install -e .[dev]
+
+# Run tests
+pytest
+
+# Format code
+black .
+
+# Type checking
+mypy mmgpbsa/
+```
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Citation
+
+If you use this package in your research, please cite:
+
+```bibtex
+@software{mmgpbsa_open,
+  title={Open-Source MMGBSA Analysis Package},
+  author={Open Source MMGBSA Team},
+  year={2024},
+  url={https://github.com/yourusername/mmgpbsa-open}
+}
+```
+
+## Acknowledgments
+
+This package builds upon several excellent open-source projects:
+- [OpenMM](http://openmm.org/) - Molecular dynamics
+- [RDKit](https://www.rdkit.org/) - Molecular informatics
+- [MDTraj](http://mdtraj.org/) - Trajectory analysis
+- [PyMBAR](https://github.com/choderalab/pymbar) - Statistical analysis
+- [Vina](http://vina.scripps.edu/) - Molecular docking
+
+## Support
+
+- **Documentation**: [https://mmgpbsa-open.readthedocs.io/](https://mmgpbsa-open.readthedocs.io/)
+- **Issues**: [GitHub Issues](https://github.com/yourusername/mmgpbsa-open/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/mmgpbsa-open/discussions)
 

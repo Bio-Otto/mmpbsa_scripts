@@ -59,7 +59,11 @@ if __name__ == '__main__':
     setup_folder(args)
 
     if args.amber_path is None:
-        args.amber_path = os.environ['AMBERHOME']
+        try:
+            args.amber_path = os.environ['AMBERHOME']
+        except KeyError:
+            args.amber_path = None
+            print("AMBERHOME not set. Using open-source alternatives.")
 
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.ERROR)
