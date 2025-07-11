@@ -59,7 +59,7 @@ Examples:
     output_group.add_argument('--odir', type=str, default=None,
                              help='Output directory for results (default: auto-generated)')
     output_group.add_argument('-v', '--verbose', type=int, choices=[0, 1, 2], default=1,
-                             help='Verbosity level (default: 1)')
+                             help='Verbosity level (default: 1)', dest='v')
     
     args = parser.parse_args()
     
