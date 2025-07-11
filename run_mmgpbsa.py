@@ -9,36 +9,75 @@ from mmgpbsa.systemloader import SystemLoader
 
 
 def get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--amber_path', type=str, default=None, required=False,
-                        help='path to amber installation folder (ex /home/austin/amber20)')
-    parser.add_argument('--com', type=str, default=None,
-                        help='pdb input file with ligand and protein in complex. Only one chain for now please!')
-    parser.add_argument('--apo', type=str, default=None,
-                        help='pdb input file without ligand. Only one chain for now please!')
-    parser.add_argument('--com', type=str, default=None,
-                        help='file input file with ligand.')
+    parser = argparse.ArgumentParser(
+        description='Open-source MMGBSA analysis package',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Basic usage with complex file
+  python run_mmgpbsa.py --com complex.pdb --odir results
 
-    parser.add_argument('--platform', type=str, choices=['CPU', 'CUDA', 'OpenCL'], default=None)
-    ##simulation options
-    parser.add_argument('--ps', type=float, default=None, required=False, help='picoseconds to run simulation')
-    parser.add_argument('--equil_ps', type=float, default=None, required=False,
-                        help='number of ps to run equil (not used for gb/pbsa calc)')
-    parser.add_argument('--calcFrames', type=int, default=None, required=False,
-                        help='number of frames averaged over trajectory for calculation')
-    parser.add_argument('--mbar', type=int, required=False, default=None, help='use pymbar to subsample from this number of frames (should be > 25 at least)')
-    parser.add_argument('--method', type=str, choices=['gbsa', 'pbsa'], default='gbsa', help='use pbsa or gbsa')
+  # Using separate protein and ligand files
+  python run_mmgpbsa.py --apo protein.pdb --lig ligand.mol2 --odir results
 
-    ## logging options
-    parser.add_argument('--odir', type=str, default=None, required=False, help='directory for intermediate files '
-                                                                               'and outputs')
-    parser.add_argument('-v', type=int, choices=[0, 1, 2], default=1, required=False, help='verbose level')
-
-    return parser.parse_args()
+  # Advanced usage with specific parameters
+  python run_mmgpbsa.py --com complex.pdb --odir results --platform CUDA --ps 1000 --mbar 50
+        """
+    )
+    
+    # Input file options
+    input_group = parser.add_argument_group('Input Files')
+    input_group.add_argument('--com', type=str, default=None,
+                            help='PDB file with ligand and protein in complex (single chain)')
+    input_group.add_argument('--apo', type=str, default=None,
+                            help='PDB file without ligand (single chain)')
+    input_group.add_argument('--lig', type=str, default=None,
+                            help='Ligand file (MOL2, SDF, PDB format)')
+    
+    # AMBER options (optional)
+    amber_group = parser.add_argument_group('AMBER Options (Optional)')
+    amber_group.add_argument('--amber_path', type=str, default=None,
+                            help='Path to AMBER installation folder (e.g., /home/user/amber20)')
+    
+    # Simulation options
+    sim_group = parser.add_argument_group('Simulation Options')
+    sim_group.add_argument('--platform', type=str, choices=['CPU', 'CUDA', 'OpenCL'], default='CPU',
+                          help='OpenMM platform to use (default: CPU)')
+    sim_group.add_argument('--ps', type=float, default=10.0,
+                          help='Picoseconds to run simulation (default: 10.0)')
+    sim_group.add_argument('--equil_ps', type=float, default=10.0,
+                          help='Picoseconds for equilibration (default: 10.0)')
+    sim_group.add_argument('--calcFrames', type=int, default=None,
+                          help='Number of frames for calculation (default: auto)')
+    sim_group.add_argument('--mbar', type=int, default=30,
+                          help='Use PyMBAR to subsample frames (default: 30)')
+    sim_group.add_argument('--method', type=str, choices=['gbsa', 'pbsa'], default='gbsa',
+                          help='Use PBSA or GBSA (default: gbsa)')
+    
+    # Output options
+    output_group = parser.add_argument_group('Output Options')
+    output_group.add_argument('--odir', type=str, default=None,
+                             help='Output directory for results (default: auto-generated)')
+    output_group.add_argument('-v', '--verbose', type=int, choices=[0, 1, 2], default=1,
+                             help='Verbosity level (default: 1)')
+    
+    args = parser.parse_args()
+    
+    # Validate input arguments
+    if args.com is None and (args.apo is None or args.lig is None):
+        parser.error("Either --com (complex file) or both --apo and --lig (separate files) must be provided")
+    
+    return args
 
 def setup_folder(args):
     if args.odir is None:
-        args.odir = f'{os.getcwd()}/{args.pdb.split("/")[-1].split(".")[0]}'
+        # Use a default directory name if no input file is provided
+        if args.com is not None:
+            args.odir = f'{os.getcwd()}/{args.com.split("/")[-1].split(".")[0]}'
+        elif args.apo is not None and args.lig is not None:
+            args.odir = f'{os.getcwd()}/mmgbsa_analysis'
+        else:
+            args.odir = f'{os.getcwd()}/mmgbsa_analysis'
 
     try:
         os.mkdir(args.odir)
@@ -63,11 +102,12 @@ if __name__ == '__main__':
             args.amber_path = os.environ['AMBERHOME']
         except KeyError:
             args.amber_path = None
-            print("AMBERHOME not set. Using open-source alternatives.")
+            if args.v >= 1:
+                print("AMBERHOME not set. Using open-source alternatives.")
 
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.ERROR)
-    logging.getLogger('simtk').setLevel(logging.ERROR)
+    logging.getLogger('openmm').setLevel(logging.ERROR)
     logging.getLogger('openforcefield').setLevel(logging.ERROR)
     logging.getLogger('openmmtools').setLevel(logging.ERROR)
     warnings.filterwarnings("ignore")
@@ -79,7 +119,7 @@ if __name__ == '__main__':
         else:
             sl = SystemLoader(dirpath=args.odir,
                               verbose=args.v,
-                              input_pdb=args.pdb,
+                              input_pdb=args.com,  # Fixed: changed args.pdb to args.com
                               ps=args.ps,
                               calcFrames=args.calcFrames,
                               equil_ps=args.equil_ps,
@@ -89,7 +129,7 @@ if __name__ == '__main__':
     else:
         sl = SystemLoader(dirpath=args.odir,
                           verbose=args.v,
-                          input_pdb=args.pdb,
+                          input_pdb=args.com,  # Fixed: changed args.pdb to args.com
                           ps=args.ps,
                           calcFrames=args.calcFrames,
                           equil_ps=args.equil_ps,

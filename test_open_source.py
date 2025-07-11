@@ -34,9 +34,9 @@ def test_imports():
         return False
     
     try:
-        import simtk.openmm as mm
-        from simtk import unit
-        from simtk.openmm import app
+        import openmm as mm
+        from openmm import unit
+        from openmm import app
         print("✓ OpenMM imported successfully")
     except ImportError as e:
         print(f"✗ OpenMM import failed: {e}")
@@ -92,9 +92,9 @@ def test_openmm_functionality():
     print("\nTesting OpenMM functionality...")
     
     try:
-        import simtk.openmm as mm
-        from simtk import unit
-        from simtk.openmm import app
+        import openmm as mm
+        from openmm import unit
+        from openmm import app
         
         # Create a simple system
         topology = app.Topology()

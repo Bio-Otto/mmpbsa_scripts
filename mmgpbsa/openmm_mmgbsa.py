@@ -5,8 +5,8 @@ Replaces proprietary AMBER software for MMGBSA calculations
 
 import os
 import numpy as np
-from simtk import unit
-from simtk.openmm import app
+from openmm import unit
+from openmm import app
 import mdtraj as md
 
 
