@@ -5,6 +5,8 @@ import shutil
 import warnings
 
 from mmgpbsa.xtc_mmgbsa import run_xtc_mmgbsa
+from mmgpbsa.openforcefield_mmgbsa import run_openforcefield_mmgbsa
+from mmgpbsa.simple_mmgbsa import run_simple_mmgbsa
 
 
 def get_args():
@@ -46,6 +48,8 @@ Examples:
                                help='GB model: 5=GBn, 7=GBn2, 8=OBC (default: 5)')
     analysis_group.add_argument('--method', type=str, choices=['gbsa', 'pbsa'], default='gbsa',
                                help='Use PBSA or GBSA (default: gbsa)')
+    analysis_group.add_argument('--forcefield', type=str, choices=['amber', 'openforcefield', 'simple'], default='amber',
+                               help='Force field approach: amber (default), openforcefield (for ligands), simple (minimal)')
     
     # Output options
     output_group = parser.add_argument_group('Output Options')
@@ -104,6 +108,7 @@ if __name__ == '__main__':
     print(f"Complex PDB: {args.com}")
     print(f"Trajectory: {args.traj}")
     print(f"Method: {args.method}")
+    print(f"Force field: {args.forcefield}")
     print(f"Output directory: {args.odir}")
     
     # Calculate frame range if specified
@@ -115,16 +120,43 @@ if __name__ == '__main__':
         # If calcFrames is specified, use it as stride to subsample
         stride = max(1, args.calcFrames)
     
-    deltag, std = run_xtc_mmgbsa(
-        complex_pdb=args.com,
-        trajectory_file=args.traj,
-        method=args.method,
-        igb=args.mbar,  # Use mbar parameter as igb value
-        start_frame=start_frame,
-        end_frame=end_frame,
-        stride=stride,
-        verbose=args.v
-    )
+    # Choose the appropriate MMGBSA function based on force field selection
+    if args.forcefield == 'openforcefield':
+        print("Using OpenForceField Toolkit for ligand parameterization...")
+        deltag, std = run_openforcefield_mmgbsa(
+            complex_pdb=args.com,
+            trajectory_file=args.traj,
+            method=args.method,
+            igb=args.mbar,  # Use mbar parameter as igb value
+            start_frame=start_frame,
+            end_frame=end_frame,
+            stride=stride,
+            verbose=args.v
+        )
+    elif args.forcefield == 'simple':
+        print("Using simplified force field approach...")
+        deltag, std = run_simple_mmgbsa(
+            complex_pdb=args.com,
+            trajectory_file=args.traj,
+            method=args.method,
+            igb=args.mbar,  # Use mbar parameter as igb value
+            start_frame=start_frame,
+            end_frame=end_frame,
+            stride=stride,
+            verbose=args.v
+        )
+    else:  # amber (default)
+        print("Using Amber force field...")
+        deltag, std = run_xtc_mmgbsa(
+            complex_pdb=args.com,
+            trajectory_file=args.traj,
+            method=args.method,
+            igb=args.mbar,  # Use mbar parameter as igb value
+            start_frame=start_frame,
+            end_frame=end_frame,
+            stride=stride,
+            verbose=args.v
+        )
     
     if deltag is not None:
         print(f"MMGBSA Result: {deltag:.4f} ± {std:.4f} kcal/mol")
