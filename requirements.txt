@@ -9,18 +9,10 @@ mdtraj>=1.9.7
 pymbar>=4.0.0
 
 # Molecular chemistry and file handling (replacing OpenEye)
-rdkit-pypi>=2022.9.1
-openbabel>=3.1.1
-
-# Molecular docking (replacing OpenEye docking)
-vina>=1.2.0
-smina>=2021.8.2
+rdkit>=2022.9.1
 
 # Force field and parameter handling
 parmed>=3.4.0
-openforcefield>=0.11.0
 
 # Additional utilities
-pandas>=1.3.0
-matplotlib>=3.5.0
-seaborn>=0.11.0 
+pandas>=1.3.0 

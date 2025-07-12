@@ -1,18 +1,18 @@
+import os
 import subprocess
 from sys import stdout
 
 import mdtraj as md
 import numpy as np
-import simtk.openmm as mm
+import openmm as mm
 from rdkit import Chem
 from rdkit.Chem import AllChem, rdMolDescriptors
 from pymbar import timeseries
-from simtk import unit
-from simtk.openmm import app
+from openmm import unit
+from openmm import app
 
 from mmgpbsa.amber_mmgpbsa import run_amber
 from mmgpbsa.utils import make_message_writer, working_directory
-from mmgpbsa.parameter_generator import AmberParameterGenerator
 
 
 def subsample(enthalpies):
@@ -167,6 +167,9 @@ class SystemLoader:
                 AllChem.EmbedMolecule(oemol, randomSeed=42)
                 AllChem.MMFFOptimizeMolecule(oemol)
             
+            # Ensure directory exists
+            os.makedirs(self.dirpath, exist_ok=True)
+            
             # Save ligand to MOL2
             Chem.MolToMolFile(oemol, f'{self.dirpath}/lig.mol2')
             
@@ -187,9 +190,31 @@ class SystemLoader:
 
     def prepare_protein(self, protein):
         with self.logger("prepare_protein") as logger:
+            # Ensure directory exists
+            os.makedirs(self.dirpath, exist_ok=True)
+            
             # Save protein to PDB using RDKit
             Chem.MolToPDBFile(protein, f'{self.dirpath}/apo.pdb')
             self.apo = protein
+
+    def _create_complex_pdb(self, protein, ligand):
+        """Create a complex PDB file by combining protein and ligand"""
+        with self.logger("_create_complex_pdb") as logger:
+            try:
+                # Ensure directory exists
+                os.makedirs(self.dirpath, exist_ok=True)
+                
+                # Create a combined molecule
+                combined = Chem.CombineMols(protein, ligand)
+                
+                # Save the complex to PDB
+                Chem.MolToPDBFile(combined, f'{self.dirpath}/com.pdb')
+                
+                logger.log("Created complex PDB file")
+                
+            except Exception as e:
+                logger.error(f"Error creating complex PDB: {e}")
+                raise
 
     def __setup_system_im(self):
         with self.logger("__setup_system_im") as logger:
@@ -202,25 +227,16 @@ class SystemLoader:
                 self.prepare_ligand(lig)
                 self.prepare_protein(protein)
 
+                # Create complex PDB file by combining protein and ligand
+                self._create_complex_pdb(protein, lig)
+
                 with working_directory(self.dirpath):
-                    # Use the open-source parameter generator
-                    param_gen = AmberParameterGenerator(self.dirpath)
-                    
-                    # Generate parameters for ligand
-                    lig_params = param_gen.generate_ligand_parameters(lig, "lig")
-                    
-                    # Generate parameters for protein
-                    prot_params = param_gen.prepare_protein(protein, "apo")
-                    
-                    # Create complex system
-                    com_params = param_gen.create_complex_system(protein, lig, "com")
-                    
                     # Create system using OpenMM with AMBER force fields
                     # For now, we'll use a simplified approach that creates a basic system
                     # In a full implementation, you would read the actual AMBER topology files
                     
                     # Create topology from the complex PDB
-                    pdb_file = app.PDBFile(com_params['pdb'])
+                    pdb_file = app.PDBFile(f'{self.dirpath}/com.pdb')
                     topology = pdb_file.topology
                     positions = pdb_file.positions
                     
