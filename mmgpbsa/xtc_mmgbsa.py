@@ -64,9 +64,22 @@ class XTCMMGBSACalculator:
             protein_energies = self._calculate_trajectory_energies(protein_traj, "protein", igb)
             ligand_energies = self._calculate_trajectory_energies(ligand_traj, "ligand", igb)
             
+            # Debug information
+            if self.verbose >= 1:
+                print(f"Energy calculation results:")
+                print(f"  Complex energies: {len(complex_energies)} frames")
+                print(f"  Protein energies: {len(protein_energies)} frames")
+                print(f"  Ligand energies: {len(ligand_energies)} frames")
+            
             # Calculate MMGBSA
             if len(complex_energies) == 0 or len(protein_energies) == 0 or len(ligand_energies) == 0:
                 print("Error: Could not calculate energies for all systems")
+                if len(complex_energies) == 0:
+                    print("  - Complex energy calculation failed")
+                if len(protein_energies) == 0:
+                    print("  - Protein energy calculation failed")
+                if len(ligand_energies) == 0:
+                    print("  - Ligand energy calculation failed")
                 return None, None
             
             # Calculate binding free energy
@@ -130,6 +143,12 @@ class XTCMMGBSACalculator:
         protein_traj = traj.atom_slice(protein_atoms)
         ligand_traj = traj.atom_slice(ligand_atoms)
         
+        if self.verbose >= 1:
+            print(f"Trajectory splitting complete:")
+            print(f"  Original trajectory: {len(list(traj.topology.atoms))} atoms, {len(list(traj.topology.residues))} residues")
+            print(f"  Protein trajectory: {len(list(protein_traj.topology.atoms))} atoms, {len(list(protein_traj.topology.residues))} residues")
+            print(f"  Ligand trajectory: {len(list(ligand_traj.topology.atoms))} atoms, {len(list(ligand_traj.topology.residues))} residues")
+        
         return protein_traj, ligand_traj
     
     def _calculate_trajectory_energies(self, traj, system_type, igb):
@@ -156,6 +175,9 @@ class XTCMMGBSACalculator:
             # Convert frame to OpenMM system
             topology = frame.topology.to_openmm()
             positions = frame.xyz[0] * unit.nanometers
+            
+            if self.verbose >= 2:
+                print(f"  {system_type}: {len(list(topology.atoms()))} atoms, {len(list(topology.residues()))} residues")
             
             # Create force field
             forcefield = app.ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
@@ -200,8 +222,9 @@ class XTCMMGBSACalculator:
             return potential_energy.value_in_unit(unit.kilojoules_per_mole)
             
         except Exception as e:
-            if self.verbose >= 2:
+            if self.verbose >= 1:
                 print(f"Error calculating energy for {system_type}: {e}")
+                print(f"  Frame has {len(list(frame.topology.atoms))} atoms, {len(list(frame.topology.residues))} residues")
             return None
 
 
