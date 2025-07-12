@@ -99,22 +99,22 @@ class XTCMMGBSACalculator:
         if self.verbose >= 2:
             print("Splitting trajectory into protein and ligand...")
         
-        # Get residue information
-        residues = list(traj.topology.residues)
+        # Get residue information - ensure it's a proper list
+        residues = [res for res in traj.topology.residues]
         
         if len(residues) < 2:
             print("Error: Need at least 2 residues to split protein and ligand")
             return traj, traj
         
         # Find the smallest residue (assumed to be ligand)
-        residue_sizes = [(res, len(res.atoms)) for res in residues]
+        residue_sizes = [(res, len(list(res.atoms))) for res in residues]
         residue_sizes.sort(key=lambda x: x[1])
         
         ligand_residue = residue_sizes[0][0]  # Smallest residue
         protein_residues = [res for res in residues if res != ligand_residue]
         
         if self.verbose >= 2:
-            print(f"Ligand residue: {ligand_residue.name} ({len(ligand_residue.atoms)} atoms)")
+            print(f"Ligand residue: {ligand_residue.name} ({len(list(ligand_residue.atoms))} atoms)")
             print(f"Protein residues: {[res.name for res in protein_residues]}")
         
         # Create protein and ligand trajectories
